@@ -1,105 +1,98 @@
 import flatpickr from "flatpickr";
-import iziToast from "izitoast";
 import "flatpickr/dist/flatpickr.min.css";
+
+import iziToast from "izitoast";
 import "izitoast/dist/css/iziToast.min.css";
 
-const datetimePicker = document.getElementById("datetime-picker");
-const startButton = document.querySelector(".timer-button");
-let date = null;
-let intervalId = null;
-startButton.disabled = true;
-iziToast.settings({
-    timeout: 10000,
-    resetOnHover: true,
-    icon: 'material-icons',
-    transitionIn: 'flipInX',
-    transitionOut: 'flipOutX'
-});
+// Елементи
+const input = document.querySelector("#datetime-picker");
+const startBtn = document.querySelector("[data-start]");
 
+const daysEl = document.querySelector("[data-days]");
+const hoursEl = document.querySelector("[data-hours]");
+const minutesEl = document.querySelector("[data-minutes]");
+const secondsEl = document.querySelector("[data-seconds]");
 
-const options = {
-    enableTime: true,
-    time_24hr: true,
-    defaultDate: new Date(),
-    minuteIncrement: 1,
-    onClose(selectedDates) {
-        if(!selectedDates[0]) return;
+// Змінні
+let userSelectedDate = null;
+let timerId = null;
 
-        const dateObject = new Date(selectedDates[0]);
-        if (dateObject <= Date.now()) {
-            iziToast.show({message: 'Please choose a date in the future', color: 'red'})
-            startButton.disabled = true;
-            return;
-        }
-        startButton.disabled = false;
-        date = dateObject;
-    },
-};
-flatpickr(datetimePicker, options);
+startBtn.disabled = true;
 
-startButton.addEventListener("click", () => {
-    if(!date) return;
-    if (date <= Date.now()) {
-        iziToast.show({message: 'Please choose a date in the future', color: 'red'})
-        startButton.disabled = true;
-        return;
-    }
-    datetimePicker.disabled = true;
-    startTimer(date);
-    startButton.disabled = true;
-});
+// Налаштування flatpickr
+flatpickr(input, {
+  enableTime: true,
+  time_24hr: true,
+  defaultDate: new Date(),
+  minuteIncrement: 1,
 
-function convertMs(ms) {
-    // Number of milliseconds per unit of time
-    const second = 1000;
-    const minute = second * 60;
-    const hour = minute * 60;
-    const day = hour * 24;
+  onClose(selectedDates) {
+    const selectedDate = selectedDates[0];
 
-    // Remaining days
-    const days = Math.floor(ms / day);
-    // Remaining hours
-    const hours = Math.floor((ms % day) / hour);
-    // Remaining minutes
-    const minutes = Math.floor(((ms % day) % hour) / minute);
-    // Remaining seconds
-    const seconds = Math.floor((((ms % day) % hour) % minute) / second);
+    if (!selectedDate) return;
 
-    return { days, hours, minutes, seconds };
-}
-
-function startTimer(dateObject) {
-    if (intervalId) {
-        clearInterval(intervalId);
+    if (selectedDate <= new Date()) {
+      iziToast.error({
+        message: "Please choose a date in the future",
+      });
+      startBtn.disabled = true;
+      return;
     }
 
-    intervalId = setInterval(() => {
-        const timeLeft = dateObject - Date.now();
+    userSelectedDate = selectedDate;
+    startBtn.disabled = false;
+  },
+});
 
-        if (timeLeft <= 0) {
-            clearInterval(intervalId);
-            intervalId = null;
-            updateTimerValues(0, 0, 0, 0);
-            datetimePicker.disabled = false;
-            startButton.disabled = true;
-            return;
-        }
+// Старт таймера
+startBtn.addEventListener("click", () => {
+  if (!userSelectedDate) return;
 
-        const { days, hours, minutes, seconds } = convertMs(timeLeft);
-        updateTimerValues(days, hours, minutes, seconds);
-    }, 1000);
+  startBtn.disabled = true;
+  input.disabled = true;
+
+  timerId = setInterval(() => {
+    const now = new Date();
+    const diff = userSelectedDate - now;
+
+    if (diff <= 0) {
+      clearInterval(timerId);
+      updateTimer({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+
+      input.disabled = false;
+      userSelectedDate = null;
+      return;
+    }
+
+    const time = convertMs(diff);
+    updateTimer(time);
+  }, 1000);
+});
+
+// Оновлення UI
+function updateTimer({ days, hours, minutes, seconds }) {
+  daysEl.textContent = addLeadingZero(days);
+  hoursEl.textContent = addLeadingZero(hours);
+  minutesEl.textContent = addLeadingZero(minutes);
+  secondsEl.textContent = addLeadingZero(seconds);
 }
 
+// Форматування
 function addLeadingZero(value) {
-    return value.padStart(2, "0")
+  return String(value).padStart(2, "0");
 }
 
-function updateTimerValues(days, hours, minutes, seconds) {
-    const allValues = document.querySelectorAll(".value");
-    allValues.forEach((value) => {
-        if (value.dataset.days !== undefined) { value.innerHTML = addLeadingZero(days.toString()); }
-        if (value.dataset.hours !== undefined) { value.innerHTML = addLeadingZero(hours.toString()); }
-        if (value.dataset.minutes !== undefined) { value.innerHTML = addLeadingZero(minutes.toString()); }
-        if (value.dataset.seconds !== undefined) { value.innerHTML = addLeadingZero(seconds.toString()); }
-    });
+// Конвертація часу
+function convertMs(ms) {
+  const second = 1000;
+  const minute = second * 60;
+  const hour = minute * 60;
+  const day = hour * 24;
+
+  const days = Math.floor(ms / day);
+  const hours = Math.floor((ms % day) / hour);
+  const minutes = Math.floor((ms % hour) / minute);
+  const seconds = Math.floor((ms % minute) / second);
+
+  return { days, hours, minutes, seconds };
 }

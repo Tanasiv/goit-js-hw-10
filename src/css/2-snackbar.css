@@ -1,0 +1,23 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 360px;
+  margin: 32px auto;
+}
+
+.form input[type='number'] {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.form fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form button {
+  padding: 8px 12px;
+}
